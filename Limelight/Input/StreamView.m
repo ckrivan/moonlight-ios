@@ -6,6 +6,7 @@
 //  Copyright (c) 2014 Moonlight Stream. All rights reserved.
 //
 
+#import <AVFoundation/AVFoundation.h>
 #import "StreamView.h"
 #include <Limelight.h>
 #import "DataManager.h"
@@ -25,6 +26,7 @@ static const double X1_MOUSE_SPEED_DIVISOR = 2.5;
     NSMutableSet* keysDown;
     
     float streamAspectRatio;
+    CGSize lastLayoutSize;
     
     // iOS 13.4 mouse support
     NSInteger lastMouseButtonMask;
@@ -174,6 +176,31 @@ static const double X1_MOUSE_SPEED_DIVISOR = 2.5;
     else {
         return [onScreenControls getLevel];
     }
+}
+
+// Duo: the picture was fitted once, when the stream started. Refit it (and the touch controls) whenever the view
+// changes size: opening or closing the phone, rotating the open phone, Split View.
+- (void)layoutSubviews {
+    [super layoutSubviews];
+    if (streamAspectRatio <= 0 || CGSizeEqualToSize(self.bounds.size, lastLayoutSize)) {
+        return;
+    }
+    lastLayoutSize = self.bounds.size;
+
+    CGSize videoSize = [self getVideoAreaSize];
+    [CATransaction begin];
+    [CATransaction setDisableActions:YES];
+    for (CALayer* layer in self.layer.sublayers) {
+        if ([layer isKindOfClass:[AVSampleBufferDisplayLayer class]]) {
+            layer.position = CGPointMake(CGRectGetMidX(self.bounds), CGRectGetMidY(self.bounds));
+            layer.bounds = CGRectMake(0, 0, videoSize.width, videoSize.height);
+        }
+    }
+    [CATransaction commit];
+
+#if !TARGET_OS_TV
+    [onScreenControls viewSizeChanged];
+#endif
 }
 
 - (CGSize) getVideoAreaSize {
