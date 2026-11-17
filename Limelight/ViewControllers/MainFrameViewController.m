@@ -615,14 +615,33 @@ static NSMutableSet* hostList;
     _streamConfig.frameRate = [streamSettings.framerate intValue];
     if (@available(iOS 10.3, *)) {
         // Don't stream more FPS than the display can show
-        if (_streamConfig.frameRate > [UIScreen mainScreen].maximumFramesPerSecond) {
-            _streamConfig.frameRate = (int)[UIScreen mainScreen].maximumFramesPerSecond;
+        UIScreen* screen = self.view.window.windowScene.screen ?: [UIScreen mainScreen];
+        if (_streamConfig.frameRate > screen.maximumFramesPerSecond) {
+            _streamConfig.frameRate = (int)screen.maximumFramesPerSecond;
             Log(LOG_W, @"Clamping FPS to maximum refresh rate: %d", _streamConfig.frameRate);
         }
     }
     
     _streamConfig.height = [streamSettings.height intValue];
     _streamConfig.width = [streamSettings.width intValue];
+#if !TARGET_OS_TV
+    // Duo: with "Safe Area" (1) or "Full" (2) chosen in Settings, ask the PC for the size of the display the phone is
+    // using right now, so a stream started open fills the inner display and one started closed fills the outer one.
+    // Until a resolution is chosen in this fork, the default is "Full" (2): fill the display in use
+    NSInteger followDisplay = ({ NSNumber* saved = [[NSUserDefaults standardUserDefaults] objectForKey:@"duoFollowDisplay"]; saved != nil ? [saved integerValue] : 2; });
+    UIWindow* window = self.view.window;
+    if ((followDisplay == 1 || followDisplay == 2) && window != nil) {
+        CGFloat scale = (window.windowScene.screen ?: [UIScreen mainScreen]).scale;
+        CGFloat width = window.bounds.size.width;
+        if (followDisplay == 1) {
+            width -= window.safeAreaInsets.left + window.safeAreaInsets.right;
+        }
+        // Video encoders need even dimensions
+        _streamConfig.width = (int)(width * scale) & ~1;
+        _streamConfig.height = (int)(window.bounds.size.height * scale) & ~1;
+        Log(LOG_I, @"Matching the display in use: %dx%d", _streamConfig.width, _streamConfig.height);
+    }
+#endif
 #if TARGET_OS_TV
     // Don't allow streaming 4K on the Apple TV HD
     struct utsname systemInfo;

@@ -107,7 +107,9 @@
     _controllerSupport = [[ControllerSupport alloc] initWithConfig:self.streamConfig delegate:self];
     _inactivityTimer = nil;
     
-    _streamView = [[StreamView alloc] initWithFrame:self.view.frame];
+    // Duo: the window changes size when the phone opens, closes or goes side by side, so the stream follows the view
+    _streamView = [[StreamView alloc] initWithFrame:self.view.bounds];
+    _streamView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     [_streamView setupStreamView:_controllerSupport interactionDelegate:self config:self.streamConfig];
     
 #if TARGET_OS_TV
@@ -188,7 +190,8 @@
     
     // Only enable scroll and zoom in absolute touch mode
     if (_settings.absoluteTouchMode) {
-        _scrollView = [[UIScrollView alloc] initWithFrame:self.view.frame];
+        _scrollView = [[UIScrollView alloc] initWithFrame:self.view.bounds];
+        _scrollView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
 #if !TARGET_OS_TV
         [_scrollView.panGestureRecognizer setMinimumNumberOfTouches:2];
 #endif
@@ -209,6 +212,15 @@
     [self.view addSubview:_stageLabel];
     [self.view addSubview:_spinner];
     [self.view addSubview:_tipLabel];
+}
+
+// Duo: keep the connection labels where viewDidLoad put them, relative to whatever size the view is now
+- (void)viewDidLayoutSubviews {
+    [super viewDidLayoutSubviews];
+    CGSize size = self.view.bounds.size;
+    _stageLabel.center = CGPointMake(size.width / 2, size.height / 2);
+    _spinner.center = CGPointMake(size.width / 2, size.height / 2 - _stageLabel.frame.size.height - _spinner.frame.size.height);
+    _tipLabel.center = CGPointMake(size.width / 2, size.height * 0.9);
 }
 
 - (UIView *)viewForZoomingInScrollView:(UIScrollView *)scrollView {

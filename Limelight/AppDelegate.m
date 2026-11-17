@@ -212,3 +212,36 @@ static NSString* DB_NAME = @"Limelight_iOS.sqlite";
 }
 
 @end
+
+#if !TARGET_OS_TV
+@implementation SceneDelegate
+
+- (void)scene:(UIScene *)scene willConnectToSession:(UISceneSession *)session options:(UISceneConnectionOptions *)connectionOptions {
+    if (![scene isKindOfClass:[UIWindowScene class]]) {
+        return;
+    }
+
+    AppDelegate* appDelegate = (AppDelegate*)[UIApplication sharedApplication].delegate;
+    if (connectionOptions.shortcutItem != nil) {
+        appDelegate.pcUuidToLoad = (NSString*)[connectionOptions.shortcutItem.userInfo objectForKey:@"UUID"];
+    }
+
+    // The same storyboards UIMainStoryboardFile and UIMainStoryboardFile~ipad used to name
+    BOOL iPad = [UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad;
+    UIStoryboard* storyboard = [UIStoryboard storyboardWithName:iPad ? @"iPad" : @"iPhone" bundle:nil];
+
+    self.window = [[UIWindow alloc] initWithWindowScene:(UIWindowScene*)scene];
+    self.window.rootViewController = [storyboard instantiateInitialViewController];
+    // Code that asks the app delegate for the window (StreamFrameViewController) keeps working
+    appDelegate.window = self.window;
+    [self.window makeKeyAndVisible];
+}
+
+- (void)windowScene:(UIWindowScene *)windowScene performActionForShortcutItem:(UIApplicationShortcutItem *)shortcutItem completionHandler:(void (^)(BOOL succeeded))completionHandler {
+    AppDelegate* appDelegate = (AppDelegate*)[UIApplication sharedApplication].delegate;
+    appDelegate.pcUuidToLoad = (NSString*)[shortcutItem.userInfo objectForKey:@"UUID"];
+    appDelegate.shortcutCompletionHandler = completionHandler;
+}
+
+@end
+#endif
