@@ -191,7 +191,7 @@ BOOL isCustomResolution(CGSize res) {
     // Only show the 120 FPS option if we have a > 60-ish Hz display
     bool enable120Fps = false;
     if (@available(iOS 10.3, tvOS 10.3, *)) {
-        if ([UIScreen mainScreen].maximumFramesPerSecond > 62) {
+        if ((window.windowScene.screen ?: [UIScreen mainScreen]).maximumFramesPerSecond > 62) {
             enable120Fps = true;
         }
     }
@@ -250,6 +250,13 @@ BOOL isCustomResolution(CGSize res) {
     [self.swapABXYButtonsSelector setSelectedSegmentIndex:currentSettings.swapABXYButtons ? 1 : 0];
     [self.audioOnPCSelector setSelectedSegmentIndex:currentSettings.playAudioOnPC ? 1 : 0];
     NSInteger onscreenControls = [currentSettings.onscreenControls integerValue];
+    // Duo: "Safe Area" and "Full" follow the display in use when a stream starts (MainFrameViewController), so the
+    // saved numbers may be the other display's. Show the choice that was made, not whichever size happens to match.
+    // Until a resolution is chosen in this fork, the default is "Full" (2): fill the display in use
+    NSInteger followDisplay = ({ NSNumber* saved = [[NSUserDefaults standardUserDefaults] objectForKey:@"duoFollowDisplay"]; saved != nil ? [saved integerValue] : 2; });
+    if (followDisplay == 1 || followDisplay == 2) {
+        resolution = 3 + followDisplay;
+    }
     _lastSelectedResolutionIndex = resolution;
     [self.resolutionSelector setSelectedSegmentIndex:resolution];
     [self.resolutionSelector addTarget:self action:@selector(newResolutionChosen) forControlEvents:UIControlEventValueChanged];
@@ -527,6 +534,11 @@ BOOL isCustomResolution(CGSize res) {
     NSInteger framerate = [self getChosenFrameRate];
     NSInteger height = [self getChosenStreamHeight];
     NSInteger width = [self getChosenStreamWidth];
+    // Duo: remember when the choice was "Safe Area" (1) or "Full" (2) rather than a fixed size
+    NSInteger chosenResolution = [self.resolutionSelector selectedSegmentIndex];
+    BOOL customChosen = chosenResolution + 1 == [self.resolutionSelector numberOfSegments];
+    [[NSUserDefaults standardUserDefaults] setInteger:(!customChosen && (chosenResolution == 4 || chosenResolution == 5)) ? chosenResolution - 3 : 0
+                                               forKey:@"duoFollowDisplay"];
     NSInteger onscreenControls = [self.onscreenControlSelector selectedSegmentIndex];
     BOOL optimizeGames = [self.optimizeSettingsSelector selectedSegmentIndex] == 1;
     BOOL multiController = [self.multiControllerSelector selectedSegmentIndex] == 1;

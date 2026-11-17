@@ -23,3 +23,13 @@
 - (NSURL*) getStoreURL;
 
 @end
+
+#if !TARGET_OS_TV
+// Apps built with the iOS 27 SDK must use the scene life cycle: without it UIKit stops the app at launch.
+// Named in Limelight-Info.plist (UIApplicationSceneManifest).
+@interface SceneDelegate : UIResponder <UIWindowSceneDelegate>
+
+@property (strong, nonatomic) UIWindow *window;
+
+@end
+#endif

@@ -112,15 +112,7 @@ static float L2_Y;
 static float L3_X;
 static float L3_Y;
 
-- (id) initWithView:(UIView*)view controllerSup:(ControllerSupport*)controllerSupport streamConfig:(StreamConfiguration*)streamConfig {
-    self = [self init];
-    _view = view;
-    _controllerSupport = controllerSupport;
-    _controller = [controllerSupport getOscController];
-    _deadTouches = [[NSMutableArray alloc] init];
-    _swapABXY = streamConfig.swapABXYButtons;
-    
-    _iPad = ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad);
+- (void) computeControlArea {
     _controlArea = CGRectMake(0, 0, _view.frame.size.width, _view.frame.size.height);
     if (_iPad)
     {
@@ -133,6 +125,26 @@ static float L3_Y;
         _controlArea.origin.x = _controlArea.size.width * EDGE_WIDTH;
         _controlArea.size.width -= _controlArea.origin.x * 2;
     }
+}
+
+// Duo: the view changed size (the phone opened or closed), so lay the controls out again for the new size
+- (void) viewSizeChanged {
+    [self computeControlArea];
+    if (_visible) {
+        [self updateControls];
+    }
+}
+
+- (id) initWithView:(UIView*)view controllerSup:(ControllerSupport*)controllerSupport streamConfig:(StreamConfiguration*)streamConfig {
+    self = [self init];
+    _view = view;
+    _controllerSupport = controllerSupport;
+    _controller = [controllerSupport getOscController];
+    _deadTouches = [[NSMutableArray alloc] init];
+    _swapABXY = streamConfig.swapABXYButtons;
+    
+    _iPad = ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad);
+    [self computeControlArea];
     
     _aButton = [CALayer layer];
     _bButton = [CALayer layer];
